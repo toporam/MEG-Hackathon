@@ -10,10 +10,10 @@ CTF acquisition: 1200Hz
 - *005: S04_discretePositions      
 
 Eyelink 1000: ??Hz
--  01R11.edf (SO1) 
--  01R1.edf (SO1) 
--  02R1.edf (SO2) 
--  03R1.edf (SO3) 
--  04R1.edf (SO4) 
+-  01R11.edf (S01) 
+-  01R1.edf (S01) 
+-  02R1.edf (S02) 
+-  03R1.edf (S03) 
+-  04R1.edf (S04) 
 -  
 UADC16: shows the beginning of the condition, for one frame
