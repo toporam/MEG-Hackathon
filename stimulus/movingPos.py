@@ -3,14 +3,14 @@ import numpy as np
 from psychopy import visual, event, core,parallel
 from datetime import datetime
 import os
-
+import time
 
 ########## PARAMETERS ##########
 
 participant = '999'
 run = 1
-nTrials = 100
-stim_duration = 2
+stim_duration = 3 # s
+runDur = 300 # s
 
 ismeg = 0
 isfullscreen = 1
@@ -30,7 +30,7 @@ curr_path = os.path.abspath(os.path.dirname(__file__))
 if not os.path.exists(curr_path+'/results'):
     os.makedirs(curr_path+'/results')
 
-fname_data = f'{curr_path}/results/S{participant.zfill(2)}_run{run}_{t}'
+fname_data = f'{curr_path}/results/S{participant.zfill(2)}_MovingDot_run{run}_{t}'
 
 
 ########## HELPER FUNCTIONS ##########
@@ -73,63 +73,11 @@ else:
     factor = 2 
 
 
-def definePos(nTrials, wWidth,wHeight, factor):
-
-    ''' use numpy's meshgrid to define a uniform sampling of the stimulus screen '''
-
-    dim = int(np.ceil(np.sqrt(nTrials)))
-    nx, ny = (dim, dim)
-    x = np.linspace(.8*(-wWidth/factor), .8*(wWidth/factor), nx)
-    y = np.linspace(.8*(-wHeight/factor), .8*(wHeight/factor), ny)
-    xv, yv = np.meshgrid(x, y)
-    posArr =  np.reshape(np.concatenate((xv.flatten(),yv.flatten()),axis=0), (2,len(xv.flatten()))).T
-
-    if nTrials != (dim**2):
-        print(f"original n trials = {nTrials} was changed to {dim**2} to ensure uniform sampling")
-    
-    rng = np.random.default_rng()
-    i = rng.permuted(np.arange(len(posArr)))
-
-    '''
-    # plot grid
-    import matplotlib.pyplot as plt
-    fig,ax = plt.subplots()
-    ax.plot(xv, yv, marker='o', color='k', linestyle='none')
-    ax.plot(posArr[:,0], posArr[:,1], marker='o', color='r', alpha=.5, linestyle='none')
-    plt.show(block=False)
-    '''
-
-    return posArr[i,:]
-
-
-# if already defined, use existing stimulus files. Otherwise create a new sampling
-
-stim_path = os.path.join(curr_path,'stim')
-if isfullscreen:
-    fname_stim = f'{curr_path}/stim/{nTrials}trials_{stim_duration}dur_FullScreen'
-else:
-    fname_stim = f'{curr_path}/stim/{nTrials}trials_{stim_duration}dur_notFullScreen'
-
-if os.path.exists(os.path.join(stim_path,fname_stim+'.csv')):
-    posArr = pd.read_csv(os.path.join(stim_path,fname_stim + '.csv')).to_numpy()
-    isiArr = pd.read_csv(os.path.join(stim_path,fname_stim + '_isi.csv')).to_numpy().flatten()
-else:
-    posArr = definePos(nTrials, wWidth,wHeight, factor)
-    isiArr = np.random.randint(-refreshrate,refreshrate,len(posArr))
-
-    df_posArr = pd.DataFrame(posArr, columns = ['xPos','yPos'])
-    df_posArr.to_csv(f'{fname_stim}.csv',index=False)
-
-    df_isiArr = pd.DataFrame(isiArr)
-    df_isiArr.to_csv(f'{fname_stim}_isi.csv',index=False)
-
-print(f"\n\n\nrun length is: {np.cumsum(isiArr/refreshrate+2)[-1]}\n\n\n")
-
 
 photorect_white = visual.Rect(win=win,width = 5,height=10,fillColor='white',pos=(-wWidth/factor,wHeight/factor))
 photorect_black = visual.Rect(win=win,width = 5,height=10,fillColor='black',pos=(-wWidth/factor,wHeight/factor))
 
-
+isiArr = np.random.randint(-refreshrate,refreshrate,100)
 # setup triggers
 if ismeg:
     port = setup_triggers()
@@ -150,7 +98,7 @@ def instruction_screen(keylist,text):
         if pressed:
             if pressed == ['q']:
                 print('user quit experiment')
-                df = pd.DataFrame(posArr, columns = ['xPos','yPos'])
+                df = pd.DataFrame(posXY[:frames+1,:], columns = ['xPos','yPos'])
                 df.to_csv(f"{fname_data}_quit.csv",index=False)
                 if iseyetracking:
                     eyetracker.exit(el_tracker,et_fname,results_folder=f'{curr_path}/results/')
@@ -174,36 +122,123 @@ for _ in range(100):
 fixation  = visual.Circle(win,size=15,fillColor='black')
 
 win.mouseVisible = False
-import time 
+# update radius using cartesian coordinates
+dotX, dotY = 0,0
+dotSpeeds = np.array([100,120,150])/refreshrate
+
+motDirs = [30,60,120,150,45,135,0,90] *2
+motDirs = np.array(motDirs)
+motDirs[len(motDirs)//2:] *=-1
+motDirs = motDirs[:len(motDirs)-2]
+
+
+fixation.pos = (dotX,dotY)
+condTimes = np.array([5,3,4,2,3,1,3,2,4,1]*20)
+
+ind = np.where(np.cumsum(condTimes)>runDur)[0][0]
+condTimes = condTimes[:ind+1]
+condTimesCum = np.cumsum(condTimes)
+frames = 0 
+c_ = 0
+i = np.random.randint(0, len(motDirs))
+d = np.random.randint(0, len(dotSpeeds))
+
+posXY = np.zeros([runDur * refreshrate,2])
+posXY[frames,:] = [dotX,dotY]
 
 init = time.time()
-for pp in range(np.shape(posArr)[0]): 
-    fixation.pos = tuple(posArr[pp,:])
+refr_rate = win.getActualFrameRate()
+print('refresh rate', refr_rate)
+init_c = init
+
+def updateXY(dotX,dotY,motDirs,dotSpeeds,i,d):
+    tmpX = dotX + np.cos(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+    tmpY = dotY + np.sin(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+
+    if (tmpX > .8*(-wWidth/factor) and tmpX < .8*(wWidth/factor)):
+        dotX += np.cos(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+        
+    else:
+        tmpX = dotX + np.cos(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
+        outside = True
+        
+        while outside:
+            
+            if tmpX > .8*(-wWidth/factor) and tmpX < .8*(wWidth/factor):
+                dotX += np.cos(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
+                outside = False
+            else:
+                i = np.random.randint(0, len(motDirs))
+                tmpX = dotX + np.cos(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+                if tmpX > .8*(-wWidth/factor) and tmpX < .8*(wWidth/factor):
+                    outside = False
+                    dotX += np.cos(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
+            
+
+    
+    if tmpY > .8*(-wHeight/factor) and tmpY < .8*(wHeight/factor):
+        dotY += np.sin(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+    else:
+        tmpY = dotY + np.sin(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
+        outside = True
+        
+        while outside:
+            
+            if tmpY > .8*(-wHeight/factor) and tmpY < .8*(wHeight/factor):
+                dotY += np.sin(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
+                outside = False
+            else:
+                i = np.random.randint(0, len(motDirs))
+                tmpY = dotY + np.cos(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+                if tmpY > .8*(-wHeight/factor) and tmpY < .8*(wHeight/factor):
+                    outside = False
+                    dotY +=np.sin(motDirs[i]*(np.pi/180))*dotSpeeds[d]
+    
+    return dotX, dotY
+
+for pp in range(len(condTimes)): 
+
+    i = np.random.randint(0, len(motDirs))
+    d = np.random.randint(0, len(dotSpeeds))
+    
     # loop over all flips
     if iseyetracking:
         eyetracker.send_message(el_tracker,pp)
 
-    draw_stim(win,fixation,photorect_white,trigger_code=pp+1, port = port)
-    for t in range(int(stim_duration*refreshrate)-1 + isiArr[pp]):
+    draw_stim(win,fixation,photorect_white,trigger_code=0, port = port)
+    once = True
+    while time.time()-init <= condTimesCum[pp]:
+        if once:
+            print(pp, time.time()-init)
+            once = False
+
+        dotX, dotY = updateXY(dotX, dotY,motDirs,dotSpeeds,i,d)
+        fixation.pos = (dotX, dotY)
+
         last_flip = draw_stim(win,fixation,photorect_black,trigger_code=0, port = port)
         pressed=event.getKeys(keyList=response_keys, modifiers=False, timeStamped=False) 
-    
+        
         if pressed:
             if pressed == ['q']:
                 print('user quit experiment')
-                df = pd.DataFrame(posArr, columns = ['xPos','yPos'])
+                df = pd.DataFrame(posXY[:frames+1,:], columns = ['xPos','yPos'])
                 df.to_csv(f"{fname_data}_quit.csv",index=False)
                 if iseyetracking:
                     eyetracker.exit(el_tracker,et_fname,results_folder=f'{curr_path}/results/')
                 win.close()
                 core.quit()
-    
+
+        frames +=1
+        posXY[frames,:] = [dotX,dotY]
+
     if ismeg: 
         trigger(port=port,code=0)
 
+    
+
 
 # save data
-df = pd.DataFrame(posArr, columns = ['xPos','yPos'])
+df = pd.DataFrame(posXY, columns = ['xPos','yPos'])
 df.to_csv(f"{fname_data}.csv",index=False)
 
 
@@ -211,7 +246,7 @@ if iseyetracking:
     eyetracker.exit(el_tracker,et_fname,results_folder=f'{curr_path}/results/')
 
 # close
-text = visual.TextStim(win,f"End of the run.Run duration {time.time() - init} \n")
+text = visual.TextStim(win,"End of the run.\n")
 draw_text(text,win)
 core.wait(3)
 
