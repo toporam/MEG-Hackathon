@@ -1,7 +1,9 @@
-# MEG-Hackathon
-2023 MEG Eye-Tracking Hackathon <br>
+# MEG-Hackathon - Eye Tracking
 Datasets were collected from 4 subjects.  <br>
 These datasets were converted from CTF format to fif (./prep_code/Export_all_to_fif.py), and all of the MEG channels were dropped. <br>
+A dot on the screen jumped to random positions during the task (discretePositions files).  The subject would then fixate on the new dot position <br>
+The "ground truth" locations are in the .csv files and the calculated positions will be derived from the UADC channels in the MEG files <br>
+
 #### The eyetracking channels are located on the following channels: <br>
 Vertical: UADC???? <br>
 Horizontal: UADC??? <br>
