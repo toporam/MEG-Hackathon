@@ -2,5 +2,5 @@
 2023 MEG Eye-Tracking Hackathon
 
 ## Datasets
-Biowulf
-`/data/... `
+Located in the data directory of this repository
+
