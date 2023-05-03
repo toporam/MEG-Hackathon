@@ -7,17 +7,17 @@ import time
 
 ########## PARAMETERS ##########
 
-participant = '999'
+participant = '01'
 run = 1
 stim_duration = 3 # s
 runDur = 300 # s
 
-ismeg = 0
+ismeg = 1
 isfullscreen = 1
-iseyetracking = 0 # recuquires L.T.'s eyetracking script
+iseyetracking = 1 # recuquires L.T.'s eyetracking script
 refreshrate = 60
 
-ismacos = 1 # With Retina, the the screen has a “virtual” size that’s double the actual physical size and PsychoPy handles this by reporting the physical size after window creation (in win.size)
+ismacos = 0 # With Retina, the the screen has a “virtual” size that’s double the actual physical size and PsychoPy handles this by reporting the physical size after window creation (in win.size)
 response_keys = ['1','2','3','4','q', 'Q']
 background_col = [100, 100, 100] # rgb 255 space
 
@@ -66,7 +66,7 @@ else:
     win = setup_window(background_color = background_col, color_space = 'rgb255', isfullscreen = isfullscreen, ismeg = ismeg)
 
 wWidth,wHeight= win.size
-
+print(wWidth, wHeight)
 if ismacos:
     factor = 4
 else:
@@ -124,7 +124,7 @@ fixation  = visual.Circle(win,size=15,fillColor='black')
 win.mouseVisible = False
 # update radius using cartesian coordinates
 dotX, dotY = 0,0
-dotSpeeds = np.array([100,120,150])/refreshrate
+dotSpeeds = np.array([50,60,80])/refreshrate
 
 motDirs = [30,60,120,150,45,135,0,90] *2
 motDirs = np.array(motDirs)
@@ -152,6 +152,7 @@ print('refresh rate', refr_rate)
 init_c = init
 
 def updateXY(dotX,dotY,motDirs,dotSpeeds,i,d):
+
     tmpX = dotX + np.cos(motDirs[i]*(np.pi/180))*dotSpeeds[d]
     tmpY = dotY + np.sin(motDirs[i]*(np.pi/180))*dotSpeeds[d]
 
@@ -161,9 +162,11 @@ def updateXY(dotX,dotY,motDirs,dotSpeeds,i,d):
     else:
         tmpX = dotX + np.cos(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
         outside = True
-        
+    
+        maxIter = 10
+        count = 0
         while outside:
-            
+            #print('i am in')
             if tmpX > .8*(-wWidth/factor) and tmpX < .8*(wWidth/factor):
                 dotX += np.cos(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
                 outside = False
@@ -173,17 +176,20 @@ def updateXY(dotX,dotY,motDirs,dotSpeeds,i,d):
                 if tmpX > .8*(-wWidth/factor) and tmpX < .8*(wWidth/factor):
                     outside = False
                     dotX += np.cos(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
-            
 
+            count +=1
+            if count > maxIter:
+                break
     
     if tmpY > .8*(-wHeight/factor) and tmpY < .8*(wHeight/factor):
         dotY += np.sin(motDirs[i]*(np.pi/180))*dotSpeeds[d]
     else:
         tmpY = dotY + np.sin(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
         outside = True
-        
+        maxIter = 10
+        count = 0
         while outside:
-            
+            #print('i am in')
             if tmpY > .8*(-wHeight/factor) and tmpY < .8*(wHeight/factor):
                 dotY += np.sin(-motDirs[i]*(np.pi/180))*dotSpeeds[d]
                 outside = False
@@ -193,7 +199,10 @@ def updateXY(dotX,dotY,motDirs,dotSpeeds,i,d):
                 if tmpY > .8*(-wHeight/factor) and tmpY < .8*(wHeight/factor):
                     outside = False
                     dotY +=np.sin(motDirs[i]*(np.pi/180))*dotSpeeds[d]
-    
+            count +=1
+            if count > maxIter:
+                break
+
     return dotX, dotY
 
 for pp in range(len(condTimes)): 

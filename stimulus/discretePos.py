@@ -7,17 +7,17 @@ import os
 
 ########## PARAMETERS ##########
 
-participant = '999'
+participant = '04'
 run = 1
-nTrials = 100
+nTrials = 121
 stim_duration = 2
 
-ismeg = 0
+ismeg = 1
 isfullscreen = 1
-iseyetracking = 0 # recuquires L.T.'s eyetracking script
+iseyetracking = 1 # recuquires L.T.'s eyetracking script
 refreshrate = 60
 
-ismacos = 1 # With Retina, the the screen has a “virtual” size that’s double the actual physical size and PsychoPy handles this by reporting the physical size after window creation (in win.size)
+ismacos = 0 # With Retina, the the screen has a “virtual” size that’s double the actual physical size and PsychoPy handles this by reporting the physical size after window creation (in win.size)
 response_keys = ['1','2','3','4','q', 'Q']
 background_col = [100, 100, 100] # rgb 255 space
 
@@ -67,28 +67,33 @@ else:
 
 wWidth,wHeight= win.size
 
+print(win.size)
 if ismacos:
     factor = 4
 else:
     factor = 2 
 
 
+
 def definePos(nTrials, wWidth,wHeight, factor):
 
     ''' use numpy's meshgrid to define a uniform sampling of the stimulus screen '''
-
+    prcnt = .8
     dim = int(np.ceil(np.sqrt(nTrials)))
     nx, ny = (dim, dim)
-    x = np.linspace(.8*(-wWidth/factor), .8*(wWidth/factor), nx)
-    y = np.linspace(.8*(-wHeight/factor), .8*(wHeight/factor), ny)
+    x = np.linspace(prcnt*(-wWidth/factor), prcnt*(wWidth/factor), nx)
+    y = np.linspace(prcnt*(-wHeight/factor), prcnt*(wHeight/factor), ny)
     xv, yv = np.meshgrid(x, y)
     posArr =  np.reshape(np.concatenate((xv.flatten(),yv.flatten()),axis=0), (2,len(xv.flatten()))).T
 
-    if nTrials != (dim**2):
-        print(f"original n trials = {nTrials} was changed to {dim**2} to ensure uniform sampling")
+    #if nTrials != (dim**2):
+    #    print(f"original n trials = {nTrials} was changed to {dim**2} to ensure uniform sampling")
     
     rng = np.random.default_rng()
     i = rng.permuted(np.arange(len(posArr)))
+
+    #import random
+    #random.shuffle(posArr)
 
     '''
     # plot grid
@@ -99,16 +104,16 @@ def definePos(nTrials, wWidth,wHeight, factor):
     plt.show(block=False)
     '''
 
-    return posArr[i,:]
 
+    return posArr[i,:]
 
 # if already defined, use existing stimulus files. Otherwise create a new sampling
 
 stim_path = os.path.join(curr_path,'stim')
 if isfullscreen:
-    fname_stim = f'{curr_path}/stim/{nTrials}trials_{stim_duration}dur_FullScreen'
+    fname_stim = f'{curr_path}/stim/{nTrials}trials_{stim_duration}dur_MEGLAB_FullScreen'
 else:
-    fname_stim = f'{curr_path}/stim/{nTrials}trials_{stim_duration}dur_notFullScreen'
+    fname_stim = f'{curr_path}/stim/{nTrials}trials_{stim_duration}dur_MEGLAB_notFullScreen'
 
 if os.path.exists(os.path.join(stim_path,fname_stim+'.csv')):
     posArr = pd.read_csv(os.path.join(stim_path,fname_stim + '.csv')).to_numpy()
@@ -124,7 +129,7 @@ else:
     df_isiArr.to_csv(f'{fname_stim}_isi.csv',index=False)
 
 print(f"\n\n\nrun length is: {np.cumsum(isiArr/refreshrate+2)[-1]}\n\n\n")
-
+print(posArr)
 
 photorect_white = visual.Rect(win=win,width = 5,height=10,fillColor='white',pos=(-wWidth/factor,wHeight/factor))
 photorect_black = visual.Rect(win=win,width = 5,height=10,fillColor='black',pos=(-wWidth/factor,wHeight/factor))
@@ -177,6 +182,7 @@ win.mouseVisible = False
 import time 
 
 init = time.time()
+print(posArr)
 for pp in range(np.shape(posArr)[0]): 
     fixation.pos = tuple(posArr[pp,:])
     # loop over all flips
