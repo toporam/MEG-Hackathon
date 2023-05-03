@@ -10,7 +10,7 @@ Projector Stim Onset: UADC016 <br>
 
 
 ## Datasets
-MEG data are ocated in the data directory of this repository <br>
+MEG data are located in the data directory of this repository <br>
 Ground truth stimuli are located in ./stimulus/results/????.csv <br>
 
 ## Required install to read datasets
@@ -35,7 +35,7 @@ import mne
 data = mne.io.read_raw_ctf('DATASETNAME.ds', preload=True, system_clock='ignore')
 ```
 
-#Stimuli positions
+# Stimuli positions
 ```
 pos = pd.read_csv('./results/...csv')
 ```
