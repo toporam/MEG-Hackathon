@@ -19,6 +19,11 @@ Ground truth stimuli are located in ./stimulus/results/????.csv <br>
 mamba create --override-channels --channel=conda-forge --name=<<ENVNAME>> mne   
 mamba activate <<ENVNAME>>  #might need to use conda activate
 ```
+## Download this repository
+```
+git clone https://github.com/sebmonte/MEG-Hackathon.git
+```
+
 ## If you are using spyder - find the version you need here: 
 https://docs.spyder-ide.org/current/troubleshooting/common-illnesses.html <br>
 `pip install spyder-kernels==<<VERSION>>`
