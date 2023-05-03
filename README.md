@@ -19,6 +19,7 @@ https://docs.spyder-ide.org/current/troubleshooting/common-illnesses.html <br>
 import mne
 #MEG data
 data = mne.io.read_raw_ctf('DATASETNAME.ds', preload=True, system_clock='ignore'
+```
 
 #Stimuli positions
 ```
