@@ -1,6 +1,6 @@
 # MEG-Hackathon - Eye Tracking
 Datasets were collected from 4 subjects.  <br>
-These datasets were converted from CTF format to fif (./prep_code/Export_all_to_fif.py), and all of the MEG channels were dropped. <br>
+These datasets were converted from CTF format to fif (./eyetracker/prep_code/Export_all_to_fif.py), and all of the MEG channels were dropped. <br>
 A dot on the screen jumped to random positions during the task (discretePositions files).  The subject would then fixate on the new dot position <br>
 The "ground truth" locations are in the .csv files and the calculated positions will be derived from the UADC channels in the MEG files <br>
 
@@ -13,7 +13,7 @@ Projector Stim Onset: UADC016 <br>
 
 ## Datasets
 MEG data are located in the data directory of this repository <br>
-Ground truth stimuli are located in ./stimulus/results/????.csv <br>
+Ground truth stimuli are located in ./eyetracker/stimulus/results/????.csv <br>
 
 ## Required install to read datasets
 ```
@@ -24,6 +24,7 @@ mamba activate <<ENVNAME>>  #might need to use conda activate
 ## Download this repository
 ```
 git clone https://github.com/sebmonte/MEG-Hackathon.git
+pip install -e ./MEG-Hackathon
 ```
 
 ## If you are using spyder - find the version you need here: 
