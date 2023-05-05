@@ -26,7 +26,10 @@ for dset in glob.glob('*.ds'):
     raw = mne.io.read_raw_ctf(dset, system_clock='ignore', preload=True)
     
     #Drop the MEG channels
-    raw.pick_types(meg=False, misc=True)    
+    raw.pick_types(meg=False, misc=True)
+
+    with raw.info._unlock():
+        raw.info['comps'] = []
     
     #Save data
     out_fname = f'{out_name}_raw.fif'
