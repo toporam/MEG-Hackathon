@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 global screensize_pix
 screensize_pix=[1024, 768]
 eye_channel = ['UADC009-2104', 'UADC010-2104', 'UADC013-2104']
-trigger_channel = ['UPPT']
+trigger_channel = ['UADC016-2104']
 
 
 def crop_trailing_zeros(raw_eyes):
@@ -25,7 +25,23 @@ def crop_trailing_zeros(raw_eyes):
 data = mne.io.read_raw_fif('eyetracker/data/S04_discretePositions_raw.fif', preload=True)
 print(data.info.ch_names)
 eyeData = data.copy().pick_channels(eye_channel)
-#triggerData = data.copy().pick_channels(trigger_channel)
+triggerData = data.copy().pick_channels(trigger_channel)._data.flatten()
+
+plt.plot(triggerData)
+plt.show()
+
+
+#find trial onsets based on ADC016 channel
+onsets = np.where(triggerData < -4)[0]
+index = np.insert(np.where(np.diff(onsets) > 5)[0]+1,0,0)
+newonsets = onsets[index]
+
+plt.plot(triggerData)
+plt.scatter(newonsets,triggerData[newonsets])
+
+
+
+
 
 ## Helper functions
 def volts_to_pixels(x,y,pupil,minvoltage,maxvoltage,minrange,maxrange,screenbottom,screenleft,screenright,screentop,scaling_factor):
