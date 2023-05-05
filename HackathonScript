@@ -378,6 +378,9 @@ for i in range(epochs.get_data().shape[0]):
 plt.show()
 
 
+# expand this to all trials
+on_offset = (events[1,0]-events[0,0])/1200 # get actual trial duration
+#np.diff(events[:,0])/1200
+ind = np.logical_and(epochs.times<=on_offset[1], epochs.times>=on_offset[0]) # select times within trial duration
 
-(events[:2,0]-events[0,0])/1200
-epochs.times<=2.1491666
+epochs.get_data()[0,:,ind]
