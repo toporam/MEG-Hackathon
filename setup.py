@@ -6,4 +6,4 @@ setuptools.setup(
     description='Python3 tools for eyetracking analysis',
     author='LT, JS, SB, RK, ABA',
     author_email='',
-    install_requires=['mne', 'numpy', 'scipy', 'pandas', 'matplotlib']
+    install_requires=['mne', 'numpy', 'scipy', 'pandas', 'matplotlib'])
