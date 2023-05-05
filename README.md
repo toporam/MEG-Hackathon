@@ -24,7 +24,7 @@ mamba activate <<ENVNAME>>  #might need to use conda activate
 ## Download this repository
 ```
 git clone https://github.com/sebmonte/MEG-Hackathon.git
-pip install -e ./MEG-Hackathon.git
+pip install -e ./MEG-Hackathon
 ```
 
 ## If you are using spyder - find the version you need here: 
