@@ -1,0 +1,10 @@
+README.md
+setup.py
+MEG_Hackathon_Eyetracking.egg-info/PKG-INFO
+MEG_Hackathon_Eyetracking.egg-info/SOURCES.txt
+MEG_Hackathon_Eyetracking.egg-info/dependency_links.txt
+MEG_Hackathon_Eyetracking.egg-info/requires.txt
+MEG_Hackathon_Eyetracking.egg-info/top_level.txt
+eyetracker/prep_code/Export_all_to_fif.py
+eyetracker/stimulus/discretePos.py
+eyetracker/stimulus/movingPos.py
