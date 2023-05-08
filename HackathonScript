@@ -6,11 +6,50 @@ from scipy import stats
 from scipy.signal import butter,filtfilt
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+
+#Define Screen Size
 global screensize_pix
 screensize_pix=[1024, 768]
+
+#Set channels where eyetracking happened and where triggers happened
 eye_channel = ['UADC009-2104', 'UADC010-2104', 'UADC013-2104']
 trigger_channel = ['UADC016-2104']
 
+#Read in eyetracking data
+data = mne.io.read_raw_fif('eyetracker/data/S04_discretePositions_raw.fif', preload=True)
+eyeData = data.copy().pick_channels(eye_channel)
+triggerData = data.copy().pick_channels(trigger_channel)._data.flatten()
+
+#Get refresh rate
+global et_refreshrate
+meg_refreshrate = et_refreshrate = eyeData.info['sfreq']
+
+#find trial onsets based on ADC016 channel
+onsets = np.where(triggerData < -4)[0]
+index = np.insert(np.where(np.diff(onsets) > 5)[0]+1,0,0)
+newonsets = onsets[index]
+
+#What does this show again?
+plt.hist(np.diff(newonsets)/eyeData.info['sfreq'])
+plt.show()
+events = np.zeros([len(newonsets),3])
+events[:,0] = newonsets
+events[:,2] = 1
+events = events.astype(int)
+
+#Plot showing when triggers occurred that indicate onset of a stimulus
+plt.plot(triggerData)
+plt.scatter(newonsets,triggerData[newonsets])
+plt.show()
+
+# epochs = mne.Epochs(eyeData, events, tmin=-.3, tmax=2)
+
+# for i in range(epochs.get_data().shape[0]):
+#     plt.plot(epochs.times, epochs.get_data()[i,0,:])
+# plt.show()
+
+
+## Helper functions
 
 def crop_trailing_zeros(raw_eyes):
     '''
@@ -20,42 +59,6 @@ def crop_trailing_zeros(raw_eyes):
     raw_eyes.crop(0,idx_crop/raw_eyes.info['sfreq'])
     return raw_eyes
 
-
-#Read in eyetracking Data
-data = mne.io.read_raw_fif('eyetracker/data/S04_discretePositions_raw.fif', preload=True)
-eyeData = data.copy().pick_channels(eye_channel)
-triggerData = data.copy().pick_channels(trigger_channel)._data.flatten()
-
-# events = mne.find_events(data, stim_channel=trigger_channel)
-# print(events)
-
-
-
-
-#find trial onsets based on ADC016 channel
-onsets = np.where(triggerData < -4)[0]
-index = np.insert(np.where(np.diff(onsets) > 5)[0]+1,0,0)
-newonsets = onsets[index]
-plt.hist(np.diff(newonsets)/eyeData.info['sfreq'])
-plt.show()
-events = np.zeros([len(newonsets),3])
-events[:,0] = newonsets
-events[:,2] = 1
-events = events.astype(int)
-
-# epochs = mne.Epochs(eyeData, events, tmin=-.3, tmax=2)
-
-# for i in range(epochs.get_data().shape[0]):
-#     plt.plot(epochs.times, epochs.get_data()[i,0,:])
-# plt.show()
-
-
-
-# plt.plot(triggerData)
-# plt.scatter(newonsets,triggerData[newonsets])
-# plt.show()
-
-## Helper functions
 def volts_to_pixels(x,y,pupil,minvoltage,maxvoltage,minrange,maxrange,screenbottom,screenleft,screenright,screentop,scaling_factor):
     S_x                                             = ((x-minvoltage)/(maxvoltage-minvoltage))*(maxrange-minrange)+minrange
     S_y                                             = ((y-minvoltage)/(maxvoltage-minvoltage))*(maxrange-minrange)+minrange
@@ -77,39 +80,6 @@ def deviation_calculator(tv,dia,is_valid,t_interp,smooth_filt_a,smooth_filt_b):
     dev = np.abs(dia-smooth_baseline)
 
     return(dev,smooth_baseline)
-
-# def expand_gap(tv,is_valid):
-#     min_gap_width                                   = 75
-#     max_gap_width                                   = 2000
-#     pad_back                                        = 100
-#     pad_forward                                     = 150
-#     valid_t                                         = tv[is_valid]
-#     valid_idx                                       = np.where(is_valid)[0]
-#     gaps                                            = np.diff(valid_t)
-
-#     # Convert to samples 
-#     for i in min_gap_width, max_gap_width, pad_back, pad_forward:
-#         i/=et_refreshrate
-
-#     needs_padding                                   = [x and y for x,y in zip(gaps>min_gap_width,gaps<max_gap_width)]
-#     gap_start_t                                     = valid_t[np.pad(needs_padding,(0,1),constant_values=False)]
-#     gap_end_t                                       = valid_t[np.pad(needs_padding,(1,0),constant_values=False)]
-
-#     remove_idx = []
-#     for i_start,i_end in zip(gap_start_t,gap_end_t):
-#         # when the gap is super large, it's most likely a recording artifact (and not an eyeblink), so we should clean around it more
-#         if i_end -i_start > 500:
-#             pb                                      = pad_back * 2
-#             pf                                      = pad_forward * 2
-#         else:
-#             pb                                      = pad_back
-#             pf                                      = pad_forward
-#         remove_idx.extend(np.where([x and y for x,y in zip(valid_t>(i_start-pb),valid_t<(i_end+pf))])[0])
-#     remove_idx                                      = np.unique(remove_idx)
-
-#     if remove_idx.any():
-#         is_valid[valid_idx[remove_idx]]             = False
-#     return is_valid
 
 
 def raw2df(raw_et, minvoltage=-5, maxvoltage=5, minrange=-0.2, maxrange=1.2,
@@ -314,62 +284,46 @@ def pix_to_deg(full_size_pix,screensize_pix=screensize_pix,screenwidth_cm=42,scr
 
 cropped_raw = crop_trailing_zeros(eyeData)
 
-
-
-
 #transform MNE-struct to pandas and change from volts to degrees (x,y) and area (pupil)
 eye_df = raw2df(cropped_raw)
 
-global et_refreshrate
-meg_refreshrate = et_refreshrate = eyeData.info['sfreq']
 
-# Define parameters
+# Define parameters such as pupil diameter
 tv=(eye_df.index.to_numpy()*1/meg_refreshrate)*1000
 dia = eye_df['pupil'].copy().to_numpy()
 
-
-
 #What unit is diameter in?
 
-
+#Preprocessing steps
 isvalid1 = remove_invalid_samples(eye_df,tv,screensize_pix=screensize_pix)
-
 isvalid2 = madspeedfilter(tv, dia, is_valid=isvalid1)
-
 isvalid3 = mad_deviation(tv, dia, isvalid2)
-
-
-
-
 eyes_preproc_meg = eye_df.copy()
 eyes_preproc_meg['x'] = remove_invalid_detrend(eyes_preproc_meg['x'].to_numpy(),isvalid3,True)
-
 eyes_preproc_meg['x_deg'] = [pix_to_deg(i,screensize_pix=screensize_pix,screenwidth_cm=42,screendistance_cm=75) for i in eyes_preproc_meg['x']]
-
 eyes_preproc_meg['y'] = remove_invalid_detrend(eyes_preproc_meg['y'].to_numpy(),isvalid3,True)
 eyes_preproc_meg['y_deg'] = [pix_to_deg(i,screensize_pix=screensize_pix,screenwidth_cm=42,screendistance_cm=75) for i in eyes_preproc_meg['y']]
-
 eyes_preproc_meg['pupil'] = remove_invalid_detrend(eyes_preproc_meg['pupil'].to_numpy(),isvalid3,True)
 
 
 
-
+#Turning data pack into raw type so we can epoch it
 info = mne.create_info(ch_names = ['x', 'y'], sfreq = 1200)
-print(info)
-
 rawpreproc = mne.io.RawArray(eyes_preproc_meg.loc[:,['x','y']].to_numpy().T, info, first_samp=0, copy='auto', verbose=None)
 
 
+#Showing two plots, one with the x y positins on the stimulus screen before processing, and then one after processing with
+#the true positions of the stimuli layered on the back
+plt.scatter(eye_df['x'], eye_df['y'])
+plt.show()
+plt.scatter(eyes_preproc_meg['x'], eyes_preproc_meg['y'])
+truePositions = pd.read_csv('eyetracker/stimulus/results/S01_run11_05022023_170322.csv')
+plt.scatter(truePositions['xPos'], truePositions['yPos'])
+plt.show()
 
-# plt.scatter(eye_df['x'], eye_df['y'])
-# plt.show()
-# plt.scatter(eyes_preproc_meg['x'], eyes_preproc_meg['y'])
-# truePositions = pd.read_csv('eyetracker/stimulus/results/S01_run11_05022023_170322.csv')
-# plt.scatter(truePositions['xPos'], truePositions['yPos'])
-# plt.show()
 
 
-
+#Epoching Data
 
 epochs = mne.Epochs(rawpreproc, events, tmin=-.3, tmax=3)
 
