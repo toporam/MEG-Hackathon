@@ -7,6 +7,11 @@ from scipy.signal import butter,filtfilt
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
+import eyetracker
+modulepath = eyetracker.__path__[0]
+import os
+
+
 #Define Screen Size
 global screensize_pix
 screensize_pix=[1024, 768]
@@ -16,7 +21,8 @@ eye_channel = ['UADC009-2104', 'UADC010-2104', 'UADC013-2104']
 trigger_channel = ['UADC016-2104']
 
 #Read in eyetracking data
-data = mne.io.read_raw_fif('eyetracker/data/S04_discretePositions_raw.fif', preload=True)
+subjID = 'S04'
+data = mne.io.read_raw_fif(os.path.join(modulepath, 'data',f'{subjID}_discretePositions_raw.fif'), preload=True)
 eyeData = data.copy().pick_channels(eye_channel)
 triggerData = data.copy().pick_channels(trigger_channel)._data.flatten()
 
@@ -42,11 +48,11 @@ plt.plot(triggerData)
 plt.scatter(newonsets,triggerData[newonsets])
 plt.show()
 
-# epochs = mne.Epochs(eyeData, events, tmin=-.3, tmax=2)
+epochs = mne.Epochs(eyeData, events, tmin=0, tmax=3, baseline = None)
 
-# for i in range(epochs.get_data().shape[0]):
-#     plt.plot(epochs.times, epochs.get_data()[i,0,:])
-# plt.show()
+for i in range(epochs.get_data().shape[0]):
+    plt.plot(epochs.times, epochs.get_data()[i,0,:])
+plt.show()
 
 
 ## Helper functions
@@ -314,18 +320,17 @@ rawpreproc = mne.io.RawArray(eyes_preproc_meg.loc[:,['x','y']].to_numpy().T, inf
 
 #Showing two plots, one with the x y positins on the stimulus screen before processing, and then one after processing with
 #the true positions of the stimuli layered on the back
-plt.scatter(eye_df['x'], eye_df['y'])
-plt.show()
+plt.scatter(eye_df['x'], eye_df['y'], alpha=.2)
 plt.scatter(eyes_preproc_meg['x'], eyes_preproc_meg['y'])
-truePositions = pd.read_csv('eyetracker/stimulus/results/S01_run11_05022023_170322.csv')
-plt.scatter(truePositions['xPos'], truePositions['yPos'])
+truePositions = pd.read_csv(os.path.join(modulepath,'stimulus', 'results', f'{subjID}_run1.csv'))
+plt.scatter(truePositions['xPos'], truePositions['yPos'], marker='x', color='k')
 plt.show()
 
 
 
 #Epoching Data
 
-epochs = mne.Epochs(rawpreproc, events, tmin=-.3, tmax=3)
+epochs = mne.Epochs(rawpreproc, events, tmin=0, tmax=3, baseline= None)
 
 for i in range(epochs.get_data().shape[0]):
     plt.plot(epochs.times, epochs.get_data()[i,0,:])
@@ -333,8 +338,15 @@ plt.show()
 
 
 # expand this to all trials
-on_offset = (events[1,0]-events[0,0])/1200 # get actual trial duration
-#np.diff(events[:,0])/1200
-ind = np.logical_and(epochs.times<=on_offset[1], epochs.times>=on_offset[0]) # select times within trial duration
+ind = epochs.times<=1 # durations[1] # select times within trial duration
 
-epochs.get_data()[0,:,ind]
+cropped_epo = epochs.get_data()[:,:,ind]
+for i in range(cropped_epo.shape[0]):
+    plt.plot(epochs.times[ind], cropped_epo[i,0,:])
+plt.show()
+
+# plot error over time per trial
+# TODO: iterate over trials
+trial = 0
+err = np.sqrt(np.sum((cropped_epo[trial,:,:].T-truePositions.loc[trial,:].to_numpy())**2,axis=1)) # plot euclidian distance as error measure
+plt.plot(err)
