@@ -23,25 +23,37 @@ def crop_trailing_zeros(raw_eyes):
 
 #Read in eyetracking Data
 data = mne.io.read_raw_fif('eyetracker/data/S04_discretePositions_raw.fif', preload=True)
-print(data.info.ch_names)
 eyeData = data.copy().pick_channels(eye_channel)
 triggerData = data.copy().pick_channels(trigger_channel)._data.flatten()
 
-plt.plot(triggerData)
-plt.show()
+# events = mne.find_events(data, stim_channel=trigger_channel)
+# print(events)
+
+
 
 
 #find trial onsets based on ADC016 channel
 onsets = np.where(triggerData < -4)[0]
 index = np.insert(np.where(np.diff(onsets) > 5)[0]+1,0,0)
 newonsets = onsets[index]
+plt.hist(np.diff(newonsets)/eyeData.info['sfreq'])
+plt.show()
+events = np.zeros([len(newonsets),3])
+events[:,0] = newonsets
+events[:,2] = 1
+events = events.astype(int)
 
-plt.plot(triggerData)
-plt.scatter(newonsets,triggerData[newonsets])
+# epochs = mne.Epochs(eyeData, events, tmin=-.3, tmax=2)
+
+# for i in range(epochs.get_data().shape[0]):
+#     plt.plot(epochs.times, epochs.get_data()[i,0,:])
+# plt.show()
 
 
 
-
+# plt.plot(triggerData)
+# plt.scatter(newonsets,triggerData[newonsets])
+# plt.show()
 
 ## Helper functions
 def volts_to_pixels(x,y,pupil,minvoltage,maxvoltage,minrange,maxrange,screenbottom,screenleft,screenright,screentop,scaling_factor):
@@ -315,27 +327,37 @@ meg_refreshrate = et_refreshrate = eyeData.info['sfreq']
 tv=(eye_df.index.to_numpy()*1/meg_refreshrate)*1000
 dia = eye_df['pupil'].copy().to_numpy()
 
+
+
 #What unit is diameter in?
 
 
-# isvalid1 = remove_invalid_samples(eye_df,tv,screensize_pix=screensize_pix)
+isvalid1 = remove_invalid_samples(eye_df,tv,screensize_pix=screensize_pix)
 
-# isvalid2 = madspeedfilter(tv, dia, is_valid=isvalid1)
+isvalid2 = madspeedfilter(tv, dia, is_valid=isvalid1)
 
-# isvalid3 = mad_deviation(tv, dia, isvalid2)
-
-
+isvalid3 = mad_deviation(tv, dia, isvalid2)
 
 
-# eyes_preproc_meg = eye_df.copy()
-# eyes_preproc_meg['x'] = remove_invalid_detrend(eyes_preproc_meg['x'].to_numpy(),isvalid3,True)
 
-# eyes_preproc_meg['x_deg'] = [pix_to_deg(i,screensize_pix=screensize_pix,screenwidth_cm=42,screendistance_cm=75) for i in eyes_preproc_meg['x']]
 
-# eyes_preproc_meg['y'] = remove_invalid_detrend(eyes_preproc_meg['y'].to_numpy(),isvalid3,True)
-# eyes_preproc_meg['y_deg'] = [pix_to_deg(i,screensize_pix=screensize_pix,screenwidth_cm=42,screendistance_cm=75) for i in eyes_preproc_meg['y']]
+eyes_preproc_meg = eye_df.copy()
+eyes_preproc_meg['x'] = remove_invalid_detrend(eyes_preproc_meg['x'].to_numpy(),isvalid3,True)
 
-# eyes_preproc_meg['pupil'] = remove_invalid_detrend(eyes_preproc_meg['pupil'].to_numpy(),isvalid3,True)
+eyes_preproc_meg['x_deg'] = [pix_to_deg(i,screensize_pix=screensize_pix,screenwidth_cm=42,screendistance_cm=75) for i in eyes_preproc_meg['x']]
+
+eyes_preproc_meg['y'] = remove_invalid_detrend(eyes_preproc_meg['y'].to_numpy(),isvalid3,True)
+eyes_preproc_meg['y_deg'] = [pix_to_deg(i,screensize_pix=screensize_pix,screenwidth_cm=42,screendistance_cm=75) for i in eyes_preproc_meg['y']]
+
+eyes_preproc_meg['pupil'] = remove_invalid_detrend(eyes_preproc_meg['pupil'].to_numpy(),isvalid3,True)
+
+
+
+
+info = mne.create_info(ch_names = ['x', 'y'], sfreq = 1200)
+print(info)
+
+rawpreproc = mne.io.RawArray(eyes_preproc_meg.loc[:,['x','y']].to_numpy().T, info, first_samp=0, copy='auto', verbose=None)
 
 
 
@@ -349,6 +371,13 @@ dia = eye_df['pupil'].copy().to_numpy()
 
 
 
+epochs = mne.Epochs(rawpreproc, events, tmin=-.3, tmax=3)
+
+for i in range(epochs.get_data().shape[0]):
+    plt.plot(epochs.times, epochs.get_data()[i,0,:])
+plt.show()
 
 
 
+(events[:2,0]-events[0,0])/1200
+epochs.times<=2.1491666
